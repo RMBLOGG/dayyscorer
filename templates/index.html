@@ -256,15 +256,28 @@ body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text)
 <script>
 // ── State ──────────────────────────────────────────────────
 let sport  = 'football', status = 'inprogress';
-let allMatches = [], showFavs = ls.get('ds_showfavs', false), cdTimers = [];
+let allMatches = [], cdTimers = [];
 
 // ── LocalStorage ───────────────────────────────────────────
+// Cookie-based storage (more reliable than localStorage across refreshes)
 const ls = {
-  get:(k,d=null)=>{ try{const v=localStorage.getItem(k);return v!==null?JSON.parse(v):d;}catch{return d;} },
-  set:(k,v)=>{ try{localStorage.setItem(k,JSON.stringify(v));}catch{} }
+  get:(k,d=null)=>{
+    try{
+      const m=document.cookie.match('(?:^|; )'+k.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'=([^;]*)');
+      return m?JSON.parse(decodeURIComponent(m[1])):d;
+    }catch{return d;}
+  },
+  set:(k,v)=>{
+    try{
+      const val=encodeURIComponent(JSON.stringify(v));
+      const exp=new Date();exp.setFullYear(exp.getFullYear()+1);
+      document.cookie=k+'='+val+';expires='+exp.toUTCString()+';path=/;SameSite=Lax';
+    }catch{}
+  }
 };
 
 // ── Favorites ──────────────────────────────────────────────
+let showFavs = ls.get('ds_showfavs', false);
 const getFavs  = ()=> new Set(ls.get('ds_favs',[]));
 const saveFavs = s => ls.set('ds_favs',[...s]);
 function toggleFav(name) {
