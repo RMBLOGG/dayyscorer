@@ -256,7 +256,7 @@ body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text)
 <script>
 // ── State ──────────────────────────────────────────────────
 let sport  = 'football', status = 'inprogress';
-let allMatches = [], showFavs = false, cdTimers = [];
+let allMatches = [], showFavs = ls.get('ds_showfavs', false), cdTimers = [];
 
 // ── LocalStorage ───────────────────────────────────────────
 const ls = {
@@ -278,6 +278,7 @@ function toggleFav(name) {
 }
 function toggleFavView() {
   showFavs=!showFavs;
+  ls.set('ds_showfavs', showFavs);
   document.getElementById('favToggleBtn').classList.toggle('fav-on',showFavs);
   renderFavBanner();
 }
@@ -453,6 +454,8 @@ document.querySelectorAll('.status-btn').forEach(b=>b.addEventListener('click',(
 // ── Init ────────────────────────────────────────────────────
 document.getElementById('dateInput').value=new Date().toISOString().split('T')[0];
 initTheme();
+// Restore fav toggle button state
+if(showFavs) document.getElementById('favToggleBtn').classList.add('fav-on');
 loadMatches();
 setInterval(()=>{if(status==='inprogress')loadMatches();},60000);
 
