@@ -1,5 +1,5 @@
 from flask import Flask, render_template, request, jsonify, send_from_directory
-import requests, time, os
+import requests, time, os, json
 
 app = Flask(__name__, static_folder='static')
 
@@ -7,15 +7,45 @@ API_KEY  = "809019a2c3cb4da895d535e570ee7f2d"
 BASE_URL = "https://api.sportsrc.org/v2/"
 HEADERS  = {"X-API-KEY": API_KEY}
 
-# ── Cache ─────────────────────────────────────────────────
-_cache = {}
+# ── Upstash Redis (shared cache semua instance) ───────────
+REDIS_URL   = "https://humble-tick-68472.upstash.io"
+REDIS_TOKEN = "gQAAAAAAAQt4AAIncDIxNDg2ZjM0YzQyOGQ0NTkyYWFiY2E3MjQxMGYzNmJhNXAyNjg0NzI"
+REDIS_HDR   = {"Authorization": f"Bearer {REDIS_TOKEN}"}
+
+def redis_get(k):
+    try:
+        r = requests.get(f"{REDIS_URL}/get/{k}", headers=REDIS_HDR, timeout=3)
+        v = r.json().get("result")
+        if v is None: return None
+        return json.loads(v)
+    except:
+        return None
+
+def redis_set(k, v, ttl):
+    try:
+        data = json.dumps(v)
+        # SET key value EX ttl
+        requests.post(f"{REDIS_URL}/set/{k}", headers=REDIS_HDR,
+                      json={"value": data, "ex": ttl}, timeout=3)
+    except:
+        pass
+
+# Fallback in-memory cache kalau Redis gagal
+_mem = {}
 def cache_get(k):
-    e = _cache.get(k)
+    # Coba Redis dulu
+    v = redis_get(k)
+    if v is not None: return v
+    # Fallback memory
+    e = _mem.get(k)
     return e["data"] if e and time.time() < e["expires"] else None
+
 def cache_set(k, d, ttl):
-    _cache[k] = {"data": d, "expires": time.time() + ttl}
-def api_get(params, ttl=60):
-    key = str(sorted(params.items()))
+    redis_set(k, d, ttl)
+    _mem[k] = {"data": d, "expires": time.time() + ttl}
+
+def api_get(params, ttl=120):
+    key = "ds_" + "_".join(f"{k}{v}" for k,v in sorted(params.items()))
     c = cache_get(key)
     if c is not None: return c
     try:
@@ -58,7 +88,7 @@ def get_matches():
     date   = request.args.get("date", "")
     params = {"type": "matches", "sport": sport, "status": status}
     if date: params["date"] = date
-    ttl = 60 if status == "inprogress" else 600
+    ttl = 120 if status == "inprogress" else 600
     return jsonify(api_get(params, ttl))
 
 @app.route("/api/detail/<path:match_id>")
