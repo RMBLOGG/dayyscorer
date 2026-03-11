@@ -37,12 +37,6 @@ def watch(match_id): return render_template("watch.html", match_id=match_id)
 @app.route("/manifest.json")
 def manifest(): return send_from_directory("static", "manifest.json")
 
-@app.route("/icon-192.png")
-def icon192(): return send_from_directory("static", "icon-192.png")
-
-@app.route("/icon-512.png")
-def icon512(): return send_from_directory("static", "icon-512.png")
-
 @app.route("/sw.js")
 def sw():
     resp = send_from_directory("static", "sw.js")
