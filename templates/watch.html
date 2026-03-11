@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Watch Match — DayyScorer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+:root {
+  --bg:      #0d0f14;
+  --surface: #13151c;
+  --card:    #1a1d27;
+  --card2:   #1f2230;
+  --border:  rgba(255,255,255,0.06);
+  --border2: rgba(255,255,255,0.10);
+  --accent:  #3b82f6;
+  --green:   #22c55e;
+  --red:     #ef4444;
+  --text:    #e8eaf0;
+  --text2:   #9ca3b0;
+  --text3:   #5c6070;
+  --live-bg: rgba(239,68,68,0.12);
+  --live-bd: rgba(239,68,68,0.3);
+}
+html { font-size: 15px; }
+body {
+  font-family:'DM Sans',sans-serif;
+  background:var(--bg); color:var(--text);
+  min-height:100vh; -webkit-font-smoothing:antialiased;
+}
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+@keyframes spin   { to{transform:rotate(360deg)} }
+
+/* ── NAV ── */
+.nav {
+  position:sticky; top:0; z-index:100;
+  background:rgba(13,15,20,0.97);
+  backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--border);
+  height:52px; display:flex; align-items:center;
+  padding:0 16px; gap:12px;
+}
+.back-btn {
+  display:flex; align-items:center; gap:6px;
+  color:var(--text2); font-size:14px; font-weight:500;
+  text-decoration:none; padding:6px 0;
+  -webkit-tap-highlight-color:transparent;
+}
+.back-btn:active { color:var(--text); }
+.nav-title {
+  font-size:15px; font-weight:700;
+  flex:1; text-align:center;
+  white-space:nowrap; overflow:hidden;
+  text-overflow:ellipsis;
+}
+.nav-right { width:60px; }
+
+/* ── SCOREBOARD ── */
+.scoreboard {
+  background:var(--surface);
+  border-bottom:1px solid var(--border);
+  padding:20px 20px 16px;
+}
+
+.league-info {
+  display:flex; align-items:center; gap:7px;
+  justify-content:center; margin-bottom:16px;
+}
+.league-info img {
+  width:16px; height:16px; object-fit:contain;
+}
+.league-info-name {
+  font-size:12px; font-weight:600; color:var(--text2);
+}
+.league-info-round {
+  font-size:11px; color:var(--text3);
+}
+
+.teams-score {
+  display:flex; align-items:center; gap:12px;
+}
+.team-block {
+  flex:1; display:flex; flex-direction:column;
+  align-items:center; gap:8px; min-width:0;
+}
+.team-block.right { }
+
+.team-badge-lg {
+  width:52px; height:52px; object-fit:contain;
+}
+.team-badge-lg-ph {
+  width:52px; height:52px;
+  background:var(--card2); border-radius:8px;
+  display:flex; align-items:center; justify-content:center;
+  font-size:13px; font-weight:700; color:var(--text3);
+}
+.team-block-name {
+  font-size:13px; font-weight:600;
+  text-align:center; line-height:1.3;
+}
+
+.score-center {
+  display:flex; flex-direction:column;
+  align-items:center; gap:6px;
+  flex-shrink:0;
+}
+.score-display {
+  display:flex; align-items:center; gap:8px;
+}
+.score-num {
+  font-size:38px; font-weight:700;
+  font-family:'DM Mono',monospace;
+  line-height:1; color:var(--text);
+  min-width:36px; text-align:center;
+}
+.score-num.live { color:var(--red); }
+.score-sep {
+  font-size:24px; color:var(--text3);
+  font-family:'DM Mono',monospace;
+  margin-top:-2px;
+}
+
+.status-row {
+  display:flex; align-items:center; gap:6px;
+  justify-content:center;
+}
+.live-badge {
+  display:inline-flex; align-items:center; gap:4px;
+  background:var(--live-bg); border:1px solid var(--live-bd);
+  color:var(--red); border-radius:6px;
+  padding:3px 8px; font-size:11px; font-weight:700;
+}
+.live-badge-dot {
+  width:6px; height:6px; background:var(--red);
+  border-radius:50%; animation:blink 1.4s ease infinite;
+}
+.status-txt {
+  font-size:12px; color:var(--text3); font-weight:500;
+}
+
+/* ── PERIOD SCORES ── */
+.period-row {
+  display:flex; justify-content:center; gap:8px;
+  margin-top:12px; padding-top:12px;
+  border-top:1px solid var(--border);
+}
+.period-item {
+  background:var(--card2); border-radius:6px;
+  padding:4px 10px; text-align:center;
+}
+.period-label { font-size:10px; color:var(--text3); font-weight:600; }
+.period-val   { font-size:13px; font-weight:700; font-family:'DM Mono',monospace; margin-top:1px; }
+
+/* ── STREAM SECTION ── */
+.stream-section { }
+
+.stream-player {
+  position:relative; background:#000;
+  padding-top:56.25%;
+}
+.stream-player iframe {
+  position:absolute; top:0; left:0;
+  width:100%; height:100%; border:none;
+}
+.player-loading {
+  position:absolute; top:0; left:0; right:0; bottom:0;
+  display:flex; flex-direction:column;
+  align-items:center; justify-content:center;
+  background:#000; color:var(--text3);
+  font-size:13px; gap:12px;
+}
+.player-spinner {
+  width:28px; height:28px;
+  border:2.5px solid rgba(255,255,255,0.1);
+  border-top-color:var(--accent);
+  border-radius:50%;
+  animation:spin 0.7s linear infinite;
+}
+.no-stream-box {
+  display:flex; flex-direction:column;
+  align-items:center; justify-content:center;
+  background:#000; aspect-ratio:16/9;
+  gap:10px; color:var(--text3); font-size:13px;
+}
+.no-stream-icon { font-size:36px; }
+
+/* ── SOURCES ── */
+.sources-bar {
+  display:flex; gap:6px; overflow-x:auto;
+  padding:10px 16px; scrollbar-width:none;
+  border-bottom:1px solid var(--border);
+  background:var(--surface);
+}
+.sources-bar::-webkit-scrollbar { display:none; }
+
+.source-btn {
+  display:flex; align-items:center; gap:5px;
+  padding:6px 12px; border-radius:8px;
+  background:var(--card); border:1px solid var(--border2);
+  color:var(--text2); font-size:12px; font-weight:600;
+  cursor:pointer; white-space:nowrap; flex-shrink:0;
+  transition:all 0.15s;
+  -webkit-tap-highlight-color:transparent;
+}
+.source-btn:active, .source-btn.active {
+  background:var(--accent); border-color:var(--accent);
+  color:#fff;
+}
+.hd-badge {
+  background:rgba(255,255,255,0.15);
+  font-size:9px; font-weight:800;
+  padding:1px 4px; border-radius:3px;
+  letter-spacing:0.3px;
+}
+
+/* ── INFO TABS ── */
+.info-tabs {
+  display:flex; background:var(--surface);
+  border-bottom:1px solid var(--border);
+}
+.info-tab {
+  flex:1; padding:12px 8px;
+  text-align:center; font-size:13px; font-weight:600;
+  color:var(--text3); cursor:pointer;
+  border-bottom:2px solid transparent;
+  transition:all 0.15s;
+}
+.info-tab.active { color:var(--accent); border-bottom-color:var(--accent); }
+
+/* ── INFO PANELS ── */
+.info-panel { display:none; }
+.info-panel.show { display:block; }
+
+/* Details */
+.detail-grid {
+  display:grid; grid-template-columns:1fr 1fr;
+  gap:1px; background:var(--border);
+  border-bottom:1px solid var(--border);
+}
+.detail-cell {
+  background:var(--bg); padding:12px 16px;
+}
+.detail-label { font-size:11px; color:var(--text3); font-weight:600; text-transform:uppercase; letter-spacing:0.4px; margin-bottom:3px; }
+.detail-value { font-size:13px; font-weight:600; color:var(--text); }
+
+/* Referee */
+.info-person {
+  display:flex; align-items:center; gap:12px;
+  padding:14px 16px;
+  border-bottom:1px solid var(--border);
+}
+.person-photo {
+  width:44px; height:44px; border-radius:50%;
+  object-fit:cover; background:var(--card2);
+}
+.person-photo-ph {
+  width:44px; height:44px; border-radius:50%;
+  background:var(--card2); display:flex;
+  align-items:center; justify-content:center;
+  font-size:18px;
+}
+.person-info { flex:1; min-width:0; }
+.person-name { font-size:14px; font-weight:600; }
+.person-meta { font-size:12px; color:var(--text3); margin-top:2px; }
+.person-role { font-size:11px; color:var(--accent); font-weight:600; margin-bottom:2px; }
+
+/* Stats bar */
+.stat-row {
+  padding:10px 16px;
+  border-bottom:1px solid var(--border);
+}
+.stat-label {
+  font-size:11px; color:var(--text3); font-weight:600;
+  text-align:center; margin-bottom:6px;
+  text-transform:uppercase; letter-spacing:0.4px;
+}
+.stat-bar-row {
+  display:flex; align-items:center; gap:8px;
+}
+.stat-val { font-size:13px; font-weight:700; width:28px; }
+.stat-val.right { text-align:right; }
+.stat-bar { flex:1; height:4px; background:var(--card2); border-radius:2px; overflow:hidden; }
+.stat-fill { height:100%; background:var(--accent); border-radius:2px; transition:width 0.6s ease; }
+.stat-fill.away { background:var(--text3); margin-left:auto; }
+
+/* ── BOTTOM NAV ── */
+.bottom-nav {
+  position:fixed; bottom:0; left:0; right:0;
+  height:58px; background:rgba(13,15,20,0.97);
+  backdrop-filter:blur(12px);
+  border-top:1px solid var(--border);
+  display:flex; z-index:200;
+}
+.bnav {
+  flex:1; display:flex; flex-direction:column;
+  align-items:center; justify-content:center;
+  gap:3px; color:var(--text3);
+  font-size:10px; font-weight:600;
+  text-decoration:none; cursor:pointer;
+  transition:color 0.15s;
+  -webkit-tap-highlight-color:transparent;
+}
+.bnav.active, .bnav:hover { color:var(--accent); }
+.bnav svg { width:20px; height:20px; }
+
+.page-wrap { padding-bottom:72px; }
+
+@media (min-width:640px) {
+  .page-wrap, .nav, .bottom-nav { max-width:640px; margin-left:auto; margin-right:auto; }
+  .bottom-nav { left:50%; transform:translateX(-50%); right:auto; width:640px; }
+}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <a class="back-btn" href="/">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+    Back
+  </a>
+  <div class="nav-title" id="navTitle">Match</div>
+  <div class="nav-right"></div>
+</nav>
+
+<div class="page-wrap">
+
+  <!-- SCOREBOARD -->
+  <div class="scoreboard" id="scoreboard">
+    <div class="league-info">
+      <div style="width:28px;height:10px;background:var(--card2);border-radius:2px;"></div>
+      <div style="width:100px;height:10px;background:var(--card2);border-radius:2px;"></div>
+    </div>
+    <div class="teams-score">
+      <div class="team-block">
+        <div class="team-badge-lg-ph">?</div>
+        <div class="team-block-name" style="color:var(--text3)">Loading</div>
+      </div>
+      <div class="score-center">
+        <div class="score-display">
+          <div class="score-num">-</div>
+          <div class="score-sep">:</div>
+          <div class="score-num">-</div>
+        </div>
+        <div class="status-row"><div class="status-txt">Loading…</div></div>
+      </div>
+      <div class="team-block right">
+        <div class="team-badge-lg-ph">?</div>
+        <div class="team-block-name" style="color:var(--text3)">Loading</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STREAM PLAYER -->
+  <div class="stream-section">
+    <div class="stream-player" id="streamPlayer">
+      <div class="player-loading" id="playerLoading">
+        <div class="player-spinner"></div>
+        Loading stream…
+      </div>
+    </div>
+
+    <!-- SOURCE BUTTONS -->
+    <div class="sources-bar" id="sourcesBar">
+      <div style="color:var(--text3);font-size:12px;padding:4px 0;">Loading sources…</div>
+    </div>
+  </div>
+
+  <!-- INFO TABS -->
+  <div class="info-tabs">
+    <div class="info-tab active" data-panel="details" onclick="switchTab(this)">Details</div>
+    <div class="info-tab" data-panel="officials" onclick="switchTab(this)">Officials</div>
+  </div>
+
+  <div class="info-panel show" id="panel-details"></div>
+  <div class="info-panel" id="panel-officials"></div>
+
+</div>
+
+<!-- BOTTOM NAV -->
+<nav class="bottom-nav">
+  <a class="bnav" href="/">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+    Home
+  </a>
+  <a class="bnav active" href="#">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+    Watch
+  </a>
+  <a class="bnav" href="#" onclick="shareMatch(); return false;">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+    Share
+  </a>
+</nav>
+
+<script>
+const matchId = "{{ match_id }}";
+
+async function loadDetail() {
+  try {
+    const res  = await fetch(`/api/detail/${matchId}`);
+    const data = await res.json();
+
+    const match  = data.data?.match_info  || {};
+    const info   = data.data?.info        || {};
+    const sources= data.data?.sources     || [];
+
+    renderScoreboard(match);
+    renderSources(sources, match);
+    renderDetails(match, info);
+    renderOfficials(info);
+  } catch(e) {
+    document.getElementById('playerLoading').innerHTML = `<div style="font-size:12px;color:var(--red)">Error: ${e.message}</div>`;
+  }
+}
+
+function renderScoreboard(m) {
+  const home   = m.teams?.home || {};
+  const away   = m.teams?.away || {};
+  const score  = m.score?.current || {};
+  const isLive = m.status === 'inprogress';
+  const isFT   = m.status === 'finished';
+  const league = m.league || {};
+
+  document.getElementById('navTitle').textContent = m.title || 'Match';
+
+  const homeBadge = home.badge
+    ? `<img class="team-badge-lg" src="${home.badge}" onerror="this.outerHTML='<div class=\\'team-badge-lg-ph\\'>${(home.code||'?').slice(0,3)}</div>'" alt="">`
+    : `<div class="team-badge-lg-ph">${(home.code||'?').slice(0,3)}</div>`;
+
+  const awayBadge = away.badge
+    ? `<img class="team-badge-lg" src="${away.badge}" onerror="this.outerHTML='<div class=\\'team-badge-lg-ph\\'>${(away.code||'?').slice(0,3)}</div>'" alt="">`
+    : `<div class="team-badge-lg-ph">${(away.code||'?').slice(0,3)}</div>`;
+
+  const statusHTML = isLive
+    ? `<div class="live-badge"><span class="live-badge-dot"></span>${m.status_detail||'LIVE'}</div>`
+    : isFT
+    ? `<div class="status-txt">Full Time</div>`
+    : `<div class="status-txt">${formatTime(m.timestamp)}</div>`;
+
+  const periods = m.score || {};
+  let periodHTML = '';
+  if (periods.period_1) {
+    periodHTML = `
+    <div class="period-row">
+      ${periods.period_1 ? `<div class="period-item"><div class="period-label">1st Half</div><div class="period-val">${periods.period_1}</div></div>` : ''}
+      ${periods.period_2 ? `<div class="period-item"><div class="period-label">2nd Half</div><div class="period-val">${periods.period_2}</div></div>` : ''}
+      ${periods.normal_time ? `<div class="period-item"><div class="period-label">Normal</div><div class="period-val">${periods.normal_time}</div></div>` : ''}
+    </div>`;
+  }
+
+  document.getElementById('scoreboard').innerHTML = `
+    <div class="league-info">
+      <img src="${league.flag||''}" style="width:18px;height:12px;object-fit:cover;border-radius:2px;" onerror="this.style.display='none'" alt="">
+      <img src="${league.logo||''}" style="width:16px;height:16px;object-fit:contain;" onerror="this.style.display='none'" alt="">
+      <span class="league-info-name">${league.name||''}</span>
+      ${league.round ? `<span class="league-info-round">· ${league.round}</span>` : ''}
+    </div>
+    <div class="teams-score">
+      <div class="team-block">
+        ${homeBadge}
+        <div class="team-block-name">${home.name||'Home'}</div>
+      </div>
+      <div class="score-center">
+        <div class="score-display">
+          <div class="score-num ${isLive?'live':''}">${score.home??'-'}</div>
+          <div class="score-sep">:</div>
+          <div class="score-num ${isLive?'live':''}">${score.away??'-'}</div>
+        </div>
+        <div class="status-row">${statusHTML}</div>
+      </div>
+      <div class="team-block right">
+        ${awayBadge}
+        <div class="team-block-name">${away.name||'Away'}</div>
+      </div>
+    </div>
+    ${periodHTML}
+  `;
+}
+
+function renderSources(sources, match) {
+  const bar    = document.getElementById('sourcesBar');
+  const player = document.getElementById('streamPlayer');
+
+  if (!sources.length) {
+    bar.innerHTML = '<div style="color:var(--text3);font-size:12px;padding:4px 0;">No streams available</div>';
+    player.innerHTML = `
+      <div class="no-stream-box">
+        <div class="no-stream-icon">📭</div>
+        <div>No stream available for this match</div>
+      </div>`;
+    return;
+  }
+
+  bar.innerHTML = sources.map((s, i) => {
+    const label = s.source ? s.source.toUpperCase() : `Source ${i+1}`;
+    const hd    = s.hd ? '<span class="hd-badge">HD</span>' : '';
+    return `<button class="source-btn ${i===0?'active':''}" onclick="playStream('${s.embedUrl}', this)">${label}${hd}</button>`;
+  }).join('');
+
+  playStream(sources[0].embedUrl, bar.querySelector('.source-btn'));
+}
+
+function playStream(url, btn) {
+  document.querySelectorAll('.source-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+
+  const player = document.getElementById('streamPlayer');
+  player.innerHTML = `
+    <div class="player-loading" id="playerLoading">
+      <div class="player-spinner"></div>
+      Loading stream…
+    </div>
+    <iframe id="streamFrame" src="${url}"
+      allow="autoplay; fullscreen; encrypted-media"
+      allowfullscreen style="display:none;">
+    </iframe>`;
+
+  const frame   = player.querySelector('#streamFrame');
+  const loading = player.querySelector('#playerLoading');
+  frame.onload = () => { loading.style.display='none'; frame.style.display='block'; };
+  setTimeout(() => { loading.style.display='none'; frame.style.display='block'; }, 4000);
+}
+
+function renderDetails(m, info) {
+  const venue = info.venue || {};
+  const ts    = m.timestamp ? new Date(m.timestamp).toLocaleString('en-GB', {day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
+  const panel = document.getElementById('panel-details');
+
+  const rows = [
+    { label:'Stadium', value: venue.stadium || '—' },
+    { label:'City',    value: venue.city    || '—' },
+    { label:'Capacity',value: venue.capacity ? venue.capacity.toLocaleString() : '—' },
+    { label:'Date',    value: ts },
+    { label:'Status',  value: m.status_detail || m.status || '—' },
+    { label:'Season',  value: m.league?.season || '—' },
+  ];
+
+  panel.innerHTML = `<div class="detail-grid">${rows.map(r => `
+    <div class="detail-cell">
+      <div class="detail-label">${r.label}</div>
+      <div class="detail-value">${r.value}</div>
+    </div>`).join('')}</div>`;
+}
+
+function renderOfficials(info) {
+  const ref      = info.referee   || null;
+  const managers = info.managers  || {};
+  const panel    = document.getElementById('panel-officials');
+  let html = '';
+
+  if (ref) {
+    html += `
+    <div class="info-person">
+      <img class="person-photo" src="${ref.photo||''}" onerror="this.outerHTML='<div class=\\'person-photo-ph\\'>🏟️</div>'" alt="">
+      <div class="person-info">
+        <div class="person-role">Referee</div>
+        <div class="person-name">${ref.name||'—'}</div>
+        <div class="person-meta">${ref.country||''} · ${ref.games_recorded||0} games · 🟡 ${ref.yellow_cards||0} · 🔴 ${ref.red_cards||0}</div>
+      </div>
+    </div>`;
+  }
+
+  ['home','away'].forEach(side => {
+    const mgr = managers[side];
+    if (!mgr) return;
+    html += `
+    <div class="info-person">
+      <img class="person-photo" src="${mgr.photo||''}" onerror="this.outerHTML='<div class=\\'person-photo-ph\\'>👔</div>'" alt="">
+      <div class="person-info">
+        <div class="person-role">${side.charAt(0).toUpperCase()+side.slice(1)} Manager</div>
+        <div class="person-name">${mgr.name||'—'}</div>
+        <div class="person-meta">${mgr.country||''}</div>
+      </div>
+    </div>`;
+  });
+
+  panel.innerHTML = html || '<div style="padding:24px 16px;text-align:center;color:var(--text3);font-size:13px;">No official data available</div>';
+}
+
+function switchTab(el) {
+  document.querySelectorAll('.info-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.info-panel').forEach(p => p.classList.remove('show'));
+  el.classList.add('active');
+  document.getElementById('panel-' + el.dataset.panel).classList.add('show');
+}
+
+function formatTime(ts) {
+  if (!ts) return '--:--';
+  return new Date(ts).toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit'});
+}
+
+function shareMatch() {
+  if (navigator.share) {
+    navigator.share({ title: document.getElementById('navTitle').textContent, url: location.href });
+  } else {
+    navigator.clipboard?.writeText(location.href);
+    alert('Link copied!');
+  }
+}
+
+loadDetail();
+</script>
+</body>
+</html>
