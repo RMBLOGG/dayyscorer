@@ -111,6 +111,8 @@ body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text)
 .fav-banner-title { font-size:11px;font-weight:700;color:var(--fav-color);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px; }
 
 /* LEAGUE GROUP */
+.section-divider { display:flex;align-items:center;gap:8px;padding:12px 16px 8px;font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px;background:var(--bg);border-bottom:1px solid var(--border);position:sticky;top:52px;z-index:10;backdrop-filter:blur(8px); }
+.section-divider .live-dot { flex-shrink:0; }
 .league-group { margin-bottom:2px; }
 .league-header { display:flex;align-items:center;gap:10px;padding:9px 16px 7px;background:var(--surface);border-top:1px solid var(--border);border-bottom:1px solid var(--border); }
 .league-flag { width:20px;height:14px;object-fit:cover;border-radius:2px;flex-shrink:0; }
@@ -359,32 +361,75 @@ async function loadMatches(){
   const main=document.getElementById('matchesMain');
   main.innerHTML='<div class="state-box"><div class="spinner"></div><div class="state-title">Loading…</div></div>';
   const date=document.getElementById('dateInput').value;
-  let url=`/api/matches?sport=${sport}&status=${status}`;
-  if(date&&status!=='inprogress')url+=`&date=${date}`;
   try{
-    const d=(await(await fetch(url)).json()).data||[];
-    if(!d.length){main.innerHTML='<div class="state-box"><div class="state-title">No matches found</div><div class="state-sub">Try a different filter or check back later</div></div>';updateTicker([]);return;}
-    allMatches=[];
-    let html='';
-    d.forEach(g=>{
-      const league=g.league||{},matches=g.matches||[];
-      matches.forEach(m=>allMatches.push({...m,_l:league}));
-      html+=`<div class="league-group">
-        <div class="league-header">
-          <img class="league-flag" src="${league.flag||''}" onerror="this.style.display='none'" alt="">
-          <img class="league-logo" src="${league.logo||''}" onerror="this.style.display='none'" alt="">
-          <span class="league-name">${league.name||''}</span>
-          <span class="league-country">${league.country||''}</span>
-          <span class="league-count">${matches.length}</span>
-        </div>
-        ${matches.map(m=>row(m,league)).join('')}
-      </div>`;
-    });
-    main.innerHTML=html;
-    updateTicker(allMatches);
+    if(status==='inprogress'){
+      // Fetch live + results simultaneously
+      const today=new Date().toISOString().split('T')[0];
+      const [liveRes, ftRes] = await Promise.all([
+        fetch(`/api/matches?sport=${sport}&status=inprogress`).then(r=>r.json()),
+        fetch(`/api/matches?sport=${sport}&status=finished&date=${today}`).then(r=>r.json())
+      ]);
+      const liveGroups = liveRes.data||[];
+      const ftGroups   = ftRes.data||[];
+      allMatches=[];
+      let html='';
+
+      // ── LIVE section ──
+      if(liveGroups.length){
+        html+=`<div class="section-divider"><span class="live-dot"></span>Live Now</div>`;
+        liveGroups.forEach(g=>{
+          const league=g.league||{},matches=g.matches||[];
+          matches.forEach(m=>allMatches.push({...m,_l:league}));
+          html+=leagueBlock(league,matches);
+        });
+      }
+
+      // ── RESULTS section ──
+      if(ftGroups.length){
+        html+=`<div class="section-divider">✅ Today's Results</div>`;
+        ftGroups.forEach(g=>{
+          const league=g.league||{},matches=g.matches||[];
+          matches.forEach(m=>allMatches.push({...m,_l:league}));
+          html+=leagueBlock(league,matches);
+        });
+      }
+
+      if(!liveGroups.length&&!ftGroups.length){
+        html='<div class="state-box"><div class="state-title">No matches found</div><div class="state-sub">Try a different filter or check back later</div></div>';
+      }
+      main.innerHTML=html;
+      updateTicker(allMatches.filter(m=>m.status==='inprogress'));
+    } else {
+      let url=`/api/matches?sport=${sport}&status=${status}`;
+      if(date)url+=`&date=${date}`;
+      const d=(await(await fetch(url)).json()).data||[];
+      if(!d.length){main.innerHTML='<div class="state-box"><div class="state-title">No matches found</div><div class="state-sub">Try a different filter or check back later</div></div>';updateTicker([]);return;}
+      allMatches=[];
+      let html='';
+      d.forEach(g=>{
+        const league=g.league||{},matches=g.matches||[];
+        matches.forEach(m=>allMatches.push({...m,_l:league}));
+        html+=leagueBlock(league,matches);
+      });
+      main.innerHTML=html;
+      updateTicker(allMatches);
+    }
     renderFavBanner();
     startCD();
   }catch(e){main.innerHTML=`<div class="state-box"><div class="state-title">Failed to load</div><div class="state-sub">${e.message}</div></div>`;}
+}
+
+function leagueBlock(league,matches){
+  return `<div class="league-group">
+    <div class="league-header">
+      <img class="league-flag" src="${league.flag||''}" onerror="this.style.display='none'" alt="">
+      <img class="league-logo" src="${league.logo||''}" onerror="this.style.display='none'" alt="">
+      <span class="league-name">${league.name||''}</span>
+      <span class="league-country">${league.country||''}</span>
+      <span class="league-count">${matches.length}</span>
+    </div>
+    ${matches.map(m=>row(m,league)).join('')}
+  </div>`;
 }
 
 // ── Render row ─────────────────────────────────────────────
