@@ -454,7 +454,6 @@ document.querySelectorAll('.status-btn').forEach(b=>b.addEventListener('click',(
 // ── Init ────────────────────────────────────────────────────
 document.getElementById('dateInput').value=new Date().toISOString().split('T')[0];
 initTheme();
-// Restore fav toggle button state
 if(showFavs) document.getElementById('favToggleBtn').classList.add('fav-on');
 loadMatches();
 setInterval(()=>{if(status==='inprogress')loadMatches();},60000);
