@@ -23,10 +23,9 @@ def redis_get(k):
 
 def redis_set(k, v, ttl):
     try:
-        data = json.dumps(v)
-        # SET key value EX ttl
-        requests.post(f"{REDIS_URL}/set/{k}", headers=REDIS_HDR,
-                      json={"value": data, "ex": ttl}, timeout=3)
+        data = requests.utils.quote(json.dumps(v), safe='')
+        requests.get(f"{REDIS_URL}/set/{k}/{data}/ex/{ttl}",
+                     headers=REDIS_HDR, timeout=3)
     except:
         pass
 
