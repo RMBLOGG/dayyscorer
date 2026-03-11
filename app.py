@@ -1,64 +1,62 @@
-from flask import Flask, render_template, request, jsonify
-import requests
-import time
+from flask import Flask, render_template, request, jsonify, send_from_directory
+import requests, time, os
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='static')
 
-API_KEY = "809019a2c3cb4da895d535e570ee7f2d"
+API_KEY  = "809019a2c3cb4da895d535e570ee7f2d"
 BASE_URL = "https://api.sportsrc.org/v2/"
-HEADERS = {"X-API-KEY": API_KEY}
+HEADERS  = {"X-API-KEY": API_KEY}
 
-# ─── Simple in-memory cache ───────────────────────────────────────────────────
+# ── Cache ─────────────────────────────────────────────────
 _cache = {}
-
-def cache_get(key):
-    entry = _cache.get(key)
-    if entry and time.time() < entry["expires"]:
-        return entry["data"]
-    return None
-
-def cache_set(key, data, ttl):
-    _cache[key] = {"data": data, "expires": time.time() + ttl}
-
-# ─── API helper ───────────────────────────────────────────────────────────────
+def cache_get(k):
+    e = _cache.get(k)
+    return e["data"] if e and time.time() < e["expires"] else None
+def cache_set(k, d, ttl):
+    _cache[k] = {"data": d, "expires": time.time() + ttl}
 def api_get(params, ttl=60):
     key = str(sorted(params.items()))
-    cached = cache_get(key)
-    if cached is not None:
-        return cached
+    c = cache_get(key)
+    if c is not None: return c
     try:
         r = requests.get(BASE_URL, headers=HEADERS, params=params, timeout=12)
-        data = r.json()
-        if data:
-            cache_set(key, data, ttl)
-        return data
+        d = r.json()
+        if d: cache_set(key, d, ttl)
+        return d
     except Exception as e:
         return {"error": str(e)}
 
-# ─── Routes ───────────────────────────────────────────────────────────────────
+# ── Pages ─────────────────────────────────────────────────
 @app.route("/")
-def index():
-    return render_template("index.html")
+def index(): return render_template("index.html")
 
 @app.route("/watch/<path:match_id>")
-def watch(match_id):
-    return render_template("watch.html", match_id=match_id)
+def watch(match_id): return render_template("watch.html", match_id=match_id)
 
+# ── PWA static files ──────────────────────────────────────
+@app.route("/manifest.json")
+def manifest(): return send_from_directory("static", "manifest.json")
+
+@app.route("/sw.js")
+def sw():
+    resp = send_from_directory("static", "sw.js")
+    resp.headers["Service-Worker-Allowed"] = "/"
+    resp.headers["Cache-Control"] = "no-cache"
+    return resp
+
+# ── API ───────────────────────────────────────────────────
 @app.route("/api/matches")
 def get_matches():
     sport  = request.args.get("sport", "football")
     status = request.args.get("status", "inprogress")
     date   = request.args.get("date", "")
     params = {"type": "matches", "sport": sport, "status": status}
-    if date:
-        params["date"] = date
-    # live = 60s, upcoming/finished = 10 min
+    if date: params["date"] = date
     ttl = 60 if status == "inprogress" else 600
     return jsonify(api_get(params, ttl))
 
 @app.route("/api/detail/<path:match_id>")
 def get_detail(match_id):
-    # detail cache 2 min
     return jsonify(api_get({"type": "detail", "id": match_id}, 120))
 
 @app.route("/api/sports")
