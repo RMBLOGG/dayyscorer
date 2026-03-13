@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>DayyScorer — Parlay Predictor</title>
+<meta name="description" content="AI-powered parlay predictions for upcoming matches">
+<meta name="theme-color" content="#0d0f14" id="themeColorMeta">
+<link rel="manifest" href="/manifest.json">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg:        #0d0f14;
+  --surface:   #13151c;
+  --card:      #1a1d27;
+  --card2:     #1f2230;
+  --border:    rgba(255,255,255,0.06);
+  --border2:   rgba(255,255,255,0.10);
+  --accent:    #3b82f6;
+  --red:       #ef4444;
+  --green:     #22c55e;
+  --amber:     #f59e0b;
+  --text:      #e8eaf0;
+  --text2:     #9ca3b0;
+  --text3:     #5c6070;
+  --live-bg:   rgba(239,68,68,0.12);
+  --live-bd:   rgba(239,68,68,0.3);
+  --nav-bg:    rgba(13,15,20,0.95);
+  --fav-color: #f59e0b;
+  --ai-glow:   rgba(59,130,246,0.15);
+  --ai-border: rgba(59,130,246,0.3);
+}
+[data-theme="light"] {
+  --bg:       #f4f6fb;
+  --surface:  #ffffff;
+  --card:     #f0f2f7;
+  --card2:    #e8ebf2;
+  --border:   rgba(0,0,0,0.07);
+  --border2:  rgba(0,0,0,0.12);
+  --text:     #111827;
+  --text2:    #4b5563;
+  --text3:    #9ca3af;
+  --live-bg:  rgba(239,68,68,0.08);
+  --live-bd:  rgba(239,68,68,0.25);
+  --nav-bg:   rgba(244,246,251,0.95);
+  --ai-glow:  rgba(59,130,246,0.08);
+}
+
+html { font-size: 15px; }
+body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; -webkit-font-smoothing:antialiased; transition:background 0.2s, color 0.2s; }
+
+@keyframes blink  { 0%,100%{opacity:1} 50%{opacity:0.3} }
+@keyframes spin   { to{transform:rotate(360deg)} }
+@keyframes fadeUp { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+@keyframes pulse  { 0%,100%{opacity:1} 50%{opacity:0.5} }
+@keyframes shimmer { 0%{background-position:-200% 0} 100%{background-position:200% 0} }
+@keyframes aiThink { 0%{box-shadow:0 0 0 0 rgba(59,130,246,0.4)} 70%{box-shadow:0 0 0 10px rgba(59,130,246,0)} 100%{box-shadow:0 0 0 0 rgba(59,130,246,0)} }
+
+/* NAV */
+.nav { position:sticky;top:0;z-index:200;background:var(--nav-bg);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);height:52px;display:flex;align-items:center;padding:0 16px;gap:10px; }
+.nav-logo { display:flex;align-items:center;gap:7px;font-weight:700;font-size:17px;letter-spacing:-0.3px;text-decoration:none;color:var(--text);flex-shrink:0; }
+.nav-logo-dot { width:8px;height:8px;background:var(--red);border-radius:50%;animation:blink 1.4s ease infinite;flex-shrink:0; }
+.nav-title { flex:1;font-size:14px;font-weight:600;color:var(--text2); }
+.nav-icon-btn { background:none;border:none;cursor:pointer;color:var(--text2);padding:6px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:background 0.15s,color 0.15s;flex-shrink:0; }
+.nav-icon-btn:hover { background:var(--card);color:var(--text); }
+
+/* HERO */
+.parlay-hero { background:linear-gradient(135deg,#0d1420 0%,#0f1929 50%,#0d0f14 100%);border-bottom:1px solid var(--border);padding:20px 16px 16px;position:relative;overflow:hidden; }
+.parlay-hero::before { content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 30% 50%,rgba(59,130,246,0.08) 0%,transparent 60%);pointer-events:none; }
+.hero-label { font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--accent);margin-bottom:6px;display:flex;align-items:center;gap:6px; }
+.hero-label::before { content:'';width:4px;height:4px;background:var(--accent);border-radius:50%;animation:pulse 2s ease infinite; }
+.hero-title { font-size:22px;font-weight:700;letter-spacing:-0.5px;margin-bottom:4px; }
+.hero-title span { color:var(--accent); }
+.hero-sub { font-size:12px;color:var(--text3);margin-bottom:16px;line-height:1.5; }
+.hero-disclaimer { font-size:10px;color:var(--text3);background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:6px;padding:7px 10px;display:flex;gap:6px;align-items:flex-start;line-height:1.5; }
+.hero-disclaimer-icon { font-size:12px;flex-shrink:0;margin-top:1px; }
+
+/* SPORT + DATE CONTROLS */
+.controls { background:var(--surface);border-bottom:1px solid var(--border);padding:10px 16px;display:flex;flex-direction:column;gap:8px; }
+.ctrl-label { font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px; }
+.sport-chips { display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px; }
+.sport-chips::-webkit-scrollbar { display:none; }
+.sport-chip { display:flex;align-items:center;gap:5px;padding:5px 12px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0;border:1px solid var(--border2);background:transparent;color:var(--text2);transition:all 0.15s;user-select:none; }
+.sport-chip:hover { background:var(--card);color:var(--text); }
+.sport-chip.active { background:var(--accent);border-color:var(--accent);color:#fff; }
+.date-ctrl { display:flex;gap:8px; }
+.date-input { flex:1;background:var(--card);border:1px solid var(--border2);border-radius:8px;padding:7px 12px;color:var(--text);font-family:inherit;font-size:13px;outline:none;color-scheme:dark; }
+[data-theme="light"] .date-input { color-scheme:light; }
+.date-input:focus { border-color:var(--accent); }
+.load-btn { background:var(--card2);color:var(--text);border:1px solid var(--border2);border-radius:8px;padding:7px 16px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;transition:all 0.15s; }
+.load-btn:hover { background:var(--card);border-color:var(--accent);color:var(--accent); }
+
+/* MATCH PICKER */
+.section-head { display:flex;align-items:center;justify-content:space-between;padding:12px 16px 8px; }
+.section-head-title { font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px; }
+.section-head-count { font-size:11px;font-weight:600;background:var(--card2);color:var(--text3);padding:1px 8px;border-radius:10px; }
+
+.pick-row { display:flex;align-items:center;padding:10px 16px;gap:10px;background:var(--bg);border-bottom:1px solid var(--border);cursor:pointer;transition:background 0.1s;-webkit-tap-highlight-color:transparent;animation:fadeUp 0.2s ease both; }
+.pick-row:hover { background:var(--card); }
+.pick-row.selected { background:rgba(59,130,246,0.06);border-left:3px solid var(--accent);padding-left:13px; }
+.pick-check { width:20px;height:20px;border-radius:6px;border:2px solid var(--border2);flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all 0.15s; }
+.pick-row.selected .pick-check { background:var(--accent);border-color:var(--accent); }
+.pick-check-icon { display:none;color:#fff; }
+.pick-row.selected .pick-check-icon { display:block; }
+.pick-teams { flex:1;min-width:0; }
+.pick-team-line { font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+.pick-meta { font-size:11px;color:var(--text3);margin-top:1px;display:flex;gap:6px;align-items:center; }
+.pick-league { white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+.pick-time { font-family:'DM Mono',monospace;font-size:10px;color:var(--accent);flex-shrink:0; }
+.pick-time.is-live { color:var(--red); }
+
+/* MARKET SELECTOR */
+.market-wrap { display:flex;flex-direction:column;gap:3px;align-items:flex-end;flex-shrink:0; }
+.market-sel { background:var(--card);border:1px solid var(--border2);border-radius:6px;padding:4px 8px;color:var(--text);font-family:inherit;font-size:11px;font-weight:600;outline:none;cursor:pointer;appearance:none;-webkit-appearance:none;min-width:90px;text-align:center; }
+.market-sel:focus { border-color:var(--accent); }
+
+/* PARLAY BUILDER PANEL */
+.builder-sticky { position:sticky;bottom:58px;z-index:100;background:var(--surface);border-top:2px solid var(--accent);padding:10px 16px;display:none; }
+.builder-sticky.show { display:block; }
+.builder-top { display:flex;align-items:center;justify-content:space-between;margin-bottom:8px; }
+.builder-title { font-size:12px;font-weight:700;color:var(--accent); }
+.builder-selections { font-size:11px;color:var(--text3); }
+.builder-picks { display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px; }
+.builder-pick-chip { display:flex;align-items:center;gap:5px;background:var(--card2);border:1px solid var(--border2);border-radius:20px;padding:3px 10px;font-size:11px;font-weight:600;max-width:160px; }
+.builder-pick-chip span { overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+.builder-pick-chip .chip-market { color:var(--accent);flex-shrink:0; }
+.builder-actions { display:flex;gap:8px; }
+.clear-btn { flex:0;background:none;border:1px solid var(--border2);border-radius:8px;padding:8px 14px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;color:var(--text3); }
+.analyze-btn { flex:1;background:var(--accent);border:none;border-radius:8px;padding:9px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;color:#fff;display:flex;align-items:center;justify-content:center;gap:7px;transition:all 0.2s; }
+.analyze-btn:hover { background:#2563eb; }
+.analyze-btn:disabled { background:var(--card2);color:var(--text3);cursor:not-allowed; }
+.analyze-btn .ai-icon { font-size:14px; }
+
+/* RESULT PANEL */
+.result-panel { padding:16px;animation:fadeUp 0.3s ease; }
+.result-header { display:flex;align-items:center;gap:10px;margin-bottom:14px; }
+.result-header-icon { width:36px;height:36px;border-radius:10px;background:rgba(59,130,246,0.15);border:1px solid var(--ai-border);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;animation:aiThink 2s ease-out; }
+.result-header-text { flex:1; }
+.result-header-title { font-size:15px;font-weight:700; }
+.result-header-sub { font-size:11px;color:var(--text3);margin-top:1px; }
+
+/* CONFIDENCE METER */
+.confidence-bar-wrap { background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:12px; }
+.conf-label { display:flex;justify-content:space-between;align-items:center;margin-bottom:8px; }
+.conf-label-text { font-size:12px;font-weight:600;color:var(--text2); }
+.conf-score { font-size:22px;font-weight:700;font-family:'DM Mono',monospace; }
+.conf-score.high { color:var(--green); }
+.conf-score.mid  { color:var(--amber); }
+.conf-score.low  { color:var(--red); }
+.conf-track { height:8px;background:var(--card2);border-radius:4px;overflow:hidden; }
+.conf-fill { height:100%;border-radius:4px;transition:width 1s ease;background:var(--green); }
+.conf-fill.mid { background:var(--amber); }
+.conf-fill.low { background:var(--red); }
+.conf-legend { display:flex;gap:12px;margin-top:8px; }
+.conf-leg-item { display:flex;align-items:center;gap:4px;font-size:10px;color:var(--text3); }
+.conf-leg-dot { width:6px;height:6px;border-radius:50%; }
+
+/* PREDICTION CARDS */
+.pred-cards { display:flex;flex-direction:column;gap:8px;margin-bottom:12px; }
+.pred-card { background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px;animation:fadeUp 0.3s ease both; }
+.pred-card-top { display:flex;align-items:flex-start;gap:8px;margin-bottom:8px; }
+.pred-card-match { flex:1;font-size:13px;font-weight:600;line-height:1.3; }
+.pred-card-market { font-size:10px;font-weight:700;color:var(--accent);background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.2);border-radius:4px;padding:2px 7px;white-space:nowrap;flex-shrink:0; }
+.pred-pick-row { display:flex;align-items:center;gap:8px;margin-bottom:6px; }
+.pred-pick-badge { font-size:13px;font-weight:700;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.25);color:var(--green);border-radius:6px;padding:4px 10px;white-space:nowrap; }
+.pred-pick-conf { font-size:11px;color:var(--text3); }
+.pred-mini-bar { height:4px;background:var(--card2);border-radius:2px;overflow:hidden;margin-bottom:8px; }
+.pred-mini-fill { height:100%;border-radius:2px; }
+.pred-reasoning { font-size:12px;color:var(--text2);line-height:1.6;border-top:1px solid var(--border);padding-top:8px; }
+
+/* AI SUMMARY */
+.ai-summary { background:linear-gradient(135deg,rgba(59,130,246,0.06),rgba(59,130,246,0.02));border:1px solid var(--ai-border);border-radius:12px;padding:14px;margin-bottom:12px; }
+.ai-summary-label { font-size:10px;font-weight:700;color:var(--accent);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;display:flex;align-items:center;gap:6px; }
+.ai-summary-label::before { content:'🤖'; }
+.ai-summary-text { font-size:13px;color:var(--text2);line-height:1.7; }
+
+/* RISK BADGE */
+.risk-row { display:flex;gap:8px;margin-bottom:12px; }
+.risk-badge { display:flex;align-items:center;gap:6px;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:600;flex:1;justify-content:center; }
+.risk-badge.low-risk { background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.25);color:var(--green); }
+.risk-badge.med-risk { background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.25);color:var(--amber); }
+.risk-badge.high-risk { background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.25);color:var(--red); }
+.risk-badge-icon { font-size:14px; }
+
+/* REGENERATE */
+.regen-btn { width:100%;background:var(--card);border:1px solid var(--border2);border-radius:8px;padding:9px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;color:var(--text2);transition:all 0.15s;display:flex;align-items:center;justify-content:center;gap:7px; }
+.regen-btn:hover { color:var(--text);background:var(--card2); }
+
+/* STATE */
+.state-box { text-align:center;padding:40px 20px;color:var(--text3); }
+.spinner { width:28px;height:28px;border:2.5px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin 0.7s linear infinite;margin:0 auto 12px; }
+.state-title { font-size:14px;font-weight:500;margin-bottom:4px; }
+.state-sub { font-size:12px; }
+
+/* AI LOADING */
+.ai-loading { text-align:center;padding:40px 20px; }
+.ai-loading-icon { font-size:32px;margin-bottom:12px;animation:pulse 1.5s ease infinite; }
+.ai-loading-title { font-size:14px;font-weight:700;color:var(--accent);margin-bottom:6px; }
+.ai-loading-steps { display:flex;flex-direction:column;gap:4px;align-items:center; }
+.ai-step { font-size:12px;color:var(--text3);opacity:0;animation:fadeUp 0.5s ease forwards; }
+
+/* BOTTOM NAV */
+.bottom-nav { position:fixed;bottom:0;left:0;right:0;height:58px;background:var(--nav-bg);backdrop-filter:blur(12px);border-top:1px solid var(--border);display:flex;z-index:200; }
+.bnav { flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:var(--text3);font-size:10px;font-weight:600;letter-spacing:0.3px;text-decoration:none;cursor:pointer;transition:color 0.15s;-webkit-tap-highlight-color:transparent; }
+.bnav.active,.bnav:hover { color:var(--accent); }
+.bnav svg { width:20px;height:20px; }
+.main { padding:0 0 130px; }
+
+/* LEAGUE HEADER in pick list */
+.league-group-header { display:flex;align-items:center;gap:8px;padding:8px 16px 6px;background:var(--surface);border-top:1px solid var(--border);border-bottom:1px solid var(--border); }
+.league-group-header img { width:16px;height:16px;object-fit:contain; }
+.league-group-name { font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px; }
+
+/* TOAST */
+.toast { position:fixed;bottom:70px;right:16px;z-index:500;background:#1f2230;color:#fff;border-radius:10px;padding:10px 16px;font-size:13px;font-weight:600;box-shadow:0 4px 20px rgba(0,0,0,0.4);display:flex;align-items:center;gap:8px;max-width:260px;border:1px solid rgba(255,255,255,0.1);pointer-events:none; }
+@keyframes slideIn  { from{transform:translateX(110%)} to{transform:translateX(0)} }
+@keyframes slideOut { from{transform:translateX(0)} to{transform:translateX(110%)} }
+.toast { animation:slideIn 0.3s ease; }
+.toast.hide { animation:slideOut 0.3s ease forwards; }
+
+@media(min-width:640px) {
+  .main,.nav,.controls,.parlay-hero { max-width:640px;margin-left:auto;margin-right:auto; }
+  .bottom-nav { max-width:640px;left:50%;transform:translateX(-50%); }
+  .builder-sticky { max-width:640px;left:50%;transform:translateX(-50%); }
+  .toast { right:calc(50% - 320px + 16px); }
+}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <a class="nav-logo" href="/"><span class="nav-logo-dot"></span>DayyScorer</a>
+  <span class="nav-title">🎯 Parlay Predictor</span>
+  <button class="nav-icon-btn" id="themeBtn" onclick="toggleTheme()" title="Toggle theme">
+    <svg id="themeIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+  </button>
+</nav>
+
+<div class="parlay-hero">
+  <div class="hero-label">AI-Powered Analysis</div>
+  <div class="hero-title">Parlay <span>Predictor</span></div>
+  <div class="hero-sub">Select 2–6 upcoming matches, choose your market, and let AI analyze the best combination.</div>
+  <div class="hero-disclaimer">
+    <span class="hero-disclaimer-icon">⚠️</span>
+    <span>Prediksi berbasis analisis AI & data historis. <b>Tidak ada jaminan akurasi.</b> Gunakan sebagai referensi, bukan keputusan finansial. Gamble responsibly.</span>
+  </div>
+</div>
+
+<div class="controls">
+  <div>
+    <div class="ctrl-label" style="margin-bottom:6px;">Sport</div>
+    <div class="sport-chips" id="sportChips">
+      <div class="sport-chip active" data-sport="football">⚽ Football</div>
+      <div class="sport-chip" data-sport="basketball">🏀 Basketball</div>
+      <div class="sport-chip" data-sport="tennis">🎾 Tennis</div>
+      <div class="sport-chip" data-sport="baseball">⚾ Baseball</div>
+      <div class="sport-chip" data-sport="hockey">🏒 Hockey</div>
+    </div>
+  </div>
+  <div>
+    <div class="ctrl-label" style="margin-bottom:6px;">Date</div>
+    <div class="date-ctrl">
+      <input type="date" class="date-input" id="dateInput">
+      <button class="load-btn" onclick="loadMatches()">Load Matches</button>
+    </div>
+  </div>
+</div>
+
+<div class="main" id="mainContent">
+  <div class="state-box">
+    <div style="font-size:32px;margin-bottom:10px;">🎯</div>
+    <div class="state-title">Select a date and sport</div>
+    <div class="state-sub">Then pick matches to build your parlay</div>
+  </div>
+</div>
+
+<!-- STICKY BUILDER -->
+<div class="builder-sticky" id="builderPanel">
+  <div class="builder-top">
+    <span class="builder-title">🎯 My Parlay (<span id="pickCount">0</span>/6)</span>
+    <span class="builder-selections" id="builderSub">Select 2–6 matches</span>
+  </div>
+  <div class="builder-picks" id="builderPicks"></div>
+  <div class="builder-actions">
+    <button class="clear-btn" onclick="clearAll()">Clear</button>
+    <button class="analyze-btn" id="analyzeBtn" onclick="analyzePick()" disabled>
+      <span class="ai-icon">🤖</span> Analyze Parlay
+    </button>
+  </div>
+</div>
+
+<!-- BOTTOM NAV -->
+<nav class="bottom-nav">
+  <a class="bnav" href="/">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Home
+  </a>
+  <a class="bnav" href="/#live">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Live
+  </a>
+  <a class="bnav" href="/#schedule">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Schedule
+  </a>
+  <a class="bnav active" href="/parlay">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>Parlay
+  </a>
+</nav>
+
+<script>
+// ── State ──────────────────────────────────────────────────
+let sport = 'football';
+let allGroups = [];
+let selected = {}; // { matchId: { match, league, market } }
+const MAX_PICKS = 6;
+const MIN_PICKS = 2;
+const MARKETS = ['1X2', 'Over 2.5', 'Under 2.5', 'BTTS', 'Home Win', 'Away Win', 'Draw'];
+
+// ── Cookie storage ─────────────────────────────────────────
+const ls = {
+  get:(k,d=null)=>{try{const m=document.cookie.match('(?:^|; )'+k.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'=([^;]*)');return m?JSON.parse(decodeURIComponent(m[1])):d;}catch{return d;}},
+  set:(k,v)=>{try{const val=encodeURIComponent(JSON.stringify(v));const exp=new Date();exp.setFullYear(exp.getFullYear()+1);document.cookie=k+'='+val+';expires='+exp.toUTCString()+';path=/;SameSite=Lax';}catch{}}
+};
+
+// ── Theme ─────────────────────────────────────────────────
+function initTheme(){applyTheme(ls.get('ds_theme','dark'));}
+function applyTheme(t){
+  document.documentElement.setAttribute('data-theme',t);ls.set('ds_theme',t);
+  const ic=document.getElementById('themeIcon');
+  document.getElementById('themeColorMeta').content=t==='light'?'#f4f6fb':'#0d0f14';
+  ic.innerHTML=t==='light'?'<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>':'<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';
+}
+function toggleTheme(){applyTheme(document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark');}
+
+// ── Sport chips ────────────────────────────────────────────
+document.querySelectorAll('.sport-chip').forEach(c=>c.addEventListener('click',()=>{
+  document.querySelectorAll('.sport-chip').forEach(x=>x.classList.remove('active'));
+  c.classList.add('active'); sport=c.dataset.sport;
+}));
+
+// ── Toast ──────────────────────────────────────────────────
+let toastT;
+function showToast(msg){let el=document.getElementById('__toast');if(!el){el=document.createElement('div');el.id='__toast';el.className='toast';document.body.appendChild(el);}el.className='toast';el.textContent=msg;clearTimeout(toastT);toastT=setTimeout(()=>{el.classList.add('hide');setTimeout(()=>el.remove(),300);},2500);}
+
+// ── Load Matches ───────────────────────────────────────────
+async function loadMatches() {
+  const date = document.getElementById('dateInput').value;
+  if (!date) { showToast('⚠️ Pick a date first'); return; }
+  const main = document.getElementById('mainContent');
+  main.innerHTML = '<div class="state-box"><div class="spinner"></div><div class="state-title">Loading matches…</div></div>';
+  selected = {};
+  updateBuilder();
+  try {
+    const r = await fetch(`/api/matches?sport=${sport}&status=notstarted&date=${date}`);
+    const d = await r.json();
+    allGroups = d.data || [];
+    if (!allGroups.length) {
+      main.innerHTML = '<div class="state-box"><div style="font-size:28px;margin-bottom:10px">📭</div><div class="state-title">No upcoming matches</div><div class="state-sub">Try a different date or sport</div></div>';
+      return;
+    }
+    renderPickList();
+  } catch(e) {
+    main.innerHTML = `<div class="state-box"><div class="state-title">Failed to load</div><div class="state-sub">${e.message}</div></div>`;
+  }
+}
+
+// ── Render pick list ───────────────────────────────────────
+function renderPickList() {
+  const main = document.getElementById('mainContent');
+  const total = allGroups.reduce((s,g)=>s+(g.matches||[]).length,0);
+  let html = `<div class="section-head"><span class="section-head-title">Upcoming Matches</span><span class="section-head-count">${total} matches</span></div>`;
+  allGroups.forEach(g => {
+    const league = g.league || {};
+    const matches = g.matches || [];
+    if (!matches.length) return;
+    html += `<div class="league-group-header">
+      <img src="${league.logo||''}" onerror="this.style.display='none'" alt="">
+      <span class="league-group-name">${league.name||''} ${league.country?'· '+league.country:''}</span>
+    </div>`;
+    matches.forEach(m => {
+      const id = m.id || (Math.random()+'');
+      const h = m.teams?.home?.name || 'Home';
+      const a = m.teams?.away?.name || 'Away';
+      const ts = m.timestamp ? new Date(m.timestamp).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}) : '--:--';
+      const isSel = !!selected[id];
+      const selMarket = selected[id]?.market || 'Home Win';
+      html += `<div class="pick-row${isSel?' selected':''}" id="row-${id}" onclick="togglePick('${id}','${esc(h)}','${esc(a)}',this)" data-id="${id}" data-home="${esc(h)}" data-away="${esc(a)}" data-league="${esc(league.name||'')}" data-ts="${m.timestamp||0}">
+        <div class="pick-check"><svg class="pick-check-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+        <div class="pick-teams">
+          <div class="pick-team-line">${h} <span style="color:var(--text3);font-weight:400">vs</span> ${a}</div>
+          <div class="pick-meta">
+            <span class="pick-league">${league.name||''}</span>
+            <span class="pick-time">${ts}</span>
+          </div>
+        </div>
+        <div class="market-wrap" onclick="event.stopPropagation()">
+          <select class="market-sel" id="mkt-${id}" onchange="changeMarket('${id}',this.value)">
+            ${MARKETS.map(mk=>`<option value="${mk}"${mk===selMarket?' selected':''}>${mk}</option>`).join('')}
+          </select>
+        </div>
+      </div>`;
+    });
+  });
+  main.innerHTML = html;
+}
+
+function esc(s) { return (s||'').replace(/'/g,"\\'").replace(/"/g,'&quot;'); }
+
+// ── Toggle pick ────────────────────────────────────────────
+function togglePick(id, home, away, row) {
+  if (selected[id]) {
+    delete selected[id];
+    row.classList.remove('selected');
+  } else {
+    if (Object.keys(selected).length >= MAX_PICKS) { showToast(`⚠️ Max ${MAX_PICKS} picks`); return; }
+    const market = document.getElementById('mkt-'+id)?.value || 'Home Win';
+    const league = row.dataset.league || '';
+    const ts = +row.dataset.ts;
+    selected[id] = { id, home, away, league, market, ts };
+    row.classList.add('selected');
+  }
+  updateBuilder();
+}
+
+function changeMarket(id, val) {
+  if (selected[id]) { selected[id].market = val; updateBuilder(); }
+}
+
+// ── Update builder panel ───────────────────────────────────
+function updateBuilder() {
+  const picks = Object.values(selected);
+  const panel = document.getElementById('builderPanel');
+  const btn = document.getElementById('analyzeBtn');
+  const count = document.getElementById('pickCount');
+  const sub = document.getElementById('builderSub');
+  const picsEl = document.getElementById('builderPicks');
+  count.textContent = picks.length;
+  panel.classList.toggle('show', picks.length > 0);
+  btn.disabled = picks.length < MIN_PICKS;
+  if (picks.length === 0) sub.textContent = 'Select 2–6 matches';
+  else if (picks.length < MIN_PICKS) sub.textContent = `${MIN_PICKS - picks.length} more needed`;
+  else sub.textContent = `${picks.length} picks ready to analyze`;
+  picsEl.innerHTML = picks.map(p=>`<div class="builder-pick-chip"><span>${p.home} vs ${p.away}</span><span class="chip-market">${p.market}</span></div>`).join('');
+}
+
+// ── Clear all ──────────────────────────────────────────────
+function clearAll() {
+  selected = {};
+  document.querySelectorAll('.pick-row.selected').forEach(r=>r.classList.remove('selected'));
+  updateBuilder();
+  document.getElementById('mainContent').querySelector('.result-panel')?.remove();
+}
+
+// ── Analyze parlay ─────────────────────────────────────────
+async function analyzePick() {
+  const picks = Object.values(selected);
+  if (picks.length < MIN_PICKS) return;
+  const main = document.getElementById('mainContent');
+
+  // Show AI loading state
+  main.innerHTML = `<div class="ai-loading">
+    <div class="ai-loading-icon">🤖</div>
+    <div class="ai-loading-title">AI is analyzing your parlay…</div>
+    <div class="ai-loading-steps">
+      <div class="ai-step" style="animation-delay:0.2s">🔍 Gathering match data…</div>
+      <div class="ai-step" style="animation-delay:0.8s">📊 Analyzing form & head-to-head…</div>
+      <div class="ai-step" style="animation-delay:1.4s">⚡ Computing parlay confidence…</div>
+      <div class="ai-step" style="animation-delay:2s">✍️ Writing prediction report…</div>
+    </div>
+  </div>`;
+
+  try {
+    const resp = await fetch('/api/parlay-predict', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ picks, sport })
+    });
+    const data = await resp.json();
+    if (data.error) throw new Error(data.error);
+    renderResult(data, picks);
+  } catch(e) {
+    main.innerHTML = `<div class="state-box"><div style="font-size:28px;margin-bottom:8px">❌</div><div class="state-title">Analysis failed</div><div class="state-sub">${e.message}</div></div>`;
+  }
+}
+
+// ── Render result ──────────────────────────────────────────
+function renderResult(data, picks) {
+  const main = document.getElementById('mainContent');
+  const conf = data.overall_confidence || 0;
+  const confClass = conf >= 65 ? 'high' : conf >= 45 ? 'mid' : 'low';
+  const fillClass = conf >= 65 ? '' : conf >= 45 ? 'mid' : 'low';
+  const risk = conf >= 65 ? 'Lower Risk' : conf >= 45 ? 'Moderate Risk' : 'Higher Risk';
+  const riskClass = conf >= 65 ? 'low-risk' : conf >= 45 ? 'med-risk' : 'high-risk';
+  const riskIcon = conf >= 65 ? '🟢' : conf >= 45 ? '🟡' : '🔴';
+
+  const predCards = (data.predictions || []).map((p, i) => {
+    const pConf = p.confidence || 50;
+    const pClass = pConf >= 65 ? 'high' : pConf >= 45 ? 'mid' : 'low';
+    const pfill = pConf >= 65 ? '#22c55e' : pConf >= 45 ? '#f59e0b' : '#ef4444';
+    return `<div class="pred-card" style="animation-delay:${i*0.08}s">
+      <div class="pred-card-top">
+        <div class="pred-card-match">${p.home} vs ${p.away}</div>
+        <div class="pred-card-market">${p.market}</div>
+      </div>
+      <div class="pred-pick-row">
+        <div class="pred-pick-badge">✅ ${p.pick}</div>
+        <div class="pred-pick-conf">${pConf}% confidence</div>
+      </div>
+      <div class="pred-mini-bar"><div class="pred-mini-fill" style="width:${pConf}%;background:${pfill}"></div></div>
+      <div class="pred-reasoning">${p.reasoning}</div>
+    </div>`;
+  }).join('');
+
+  main.innerHTML = `<div class="result-panel">
+    <div class="result-header">
+      <div class="result-header-icon">🤖</div>
+      <div class="result-header-text">
+        <div class="result-header-title">AI Parlay Analysis</div>
+        <div class="result-header-sub">${picks.length}-leg parlay · ${sport}</div>
+      </div>
+    </div>
+
+    <div class="confidence-bar-wrap">
+      <div class="conf-label">
+        <div class="conf-label-text">Overall Parlay Confidence</div>
+        <div class="conf-score ${confClass}">${conf}%</div>
+      </div>
+      <div class="conf-track"><div class="conf-fill ${fillClass}" style="width:0%" id="confFill"></div></div>
+      <div class="conf-legend">
+        <div class="conf-leg-item"><div class="conf-leg-dot" style="background:#22c55e"></div>65%+ Good</div>
+        <div class="conf-leg-item"><div class="conf-leg-dot" style="background:#f59e0b"></div>45–65% Moderate</div>
+        <div class="conf-leg-item"><div class="conf-leg-dot" style="background:#ef4444"></div>&lt;45% Risky</div>
+      </div>
+    </div>
+
+    <div class="risk-row">
+      <div class="risk-badge ${riskClass}"><span class="risk-badge-icon">${riskIcon}</span>${risk}</div>
+      <div class="risk-badge" style="background:var(--card);border:1px solid var(--border);">🎲 ${picks.length}-Leg Parlay</div>
+    </div>
+
+    <div class="ai-summary">
+      <div class="ai-summary-label">AI Summary</div>
+      <div class="ai-summary-text">${data.summary || ''}</div>
+    </div>
+
+    <div class="pred-cards">${predCards}</div>
+
+    <button class="regen-btn" onclick="analyzePick()">🔄 Re-analyze</button>
+  </div>`;
+
+  // Animate confidence bar
+  setTimeout(() => {
+    const fill = document.getElementById('confFill');
+    if (fill) fill.style.width = conf + '%';
+  }, 100);
+}
+
+// ── Init ───────────────────────────────────────────────────
+initTheme();
+document.getElementById('dateInput').value = new Date().toISOString().split('T')[0];
+// Auto-load tomorrow's matches
+const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate()+1);
+document.getElementById('dateInput').value = tomorrow.toISOString().split('T')[0];
+loadMatches();
+</script>
+</body>
+</html>
