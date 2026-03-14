@@ -346,22 +346,40 @@ function showToast(msg){let el=document.getElementById('__toast');if(!el){el=doc
 // ── Load Matches ───────────────────────────────────────────
 async function loadMatches() {
   const date = document.getElementById('dateInput').value;
-  if (!date) { showToast('⚠️ Pick a date first'); return; }
+  if (!date) { showToast('Pick a date first'); return; }
   const main = document.getElementById('mainContent');
-  main.innerHTML = '<div class="state-box"><div class="spinner"></div><div class="state-title">Loading matches…</div></div>';
+  main.innerHTML = '<div class="state-box"><div class="spinner"></div><div class="state-title">Loading matches...</div></div>';
   selected = {};
   updateBuilder();
   try {
-    const r = await fetch(`/api/matches?sport=${sport}&status=notstarted&date=${date}`);
-    const d = await r.json();
-    allGroups = d.data || [];
+    // Fetch notstarted + inprogress + finished in parallel, merge all
+    const [nsRes, ipRes, ftRes] = await Promise.all([
+      fetch(`/api/matches?sport=${sport}&status=notstarted&date=${date}`).then(r=>r.json()).catch(()=>({data:[]})),
+      fetch(`/api/matches?sport=${sport}&status=inprogress`).then(r=>r.json()).catch(()=>({data:[]})),
+      fetch(`/api/matches?sport=${sport}&status=finished&date=${date}`).then(r=>r.json()).catch(()=>({data:[]}))
+    ]);
+
+    const merged = {};
+    const addGroups = (groups, tag) => {
+      (groups||[]).forEach(g => {
+        const key = g.league?.name || ('_'+Math.random());
+        if (!merged[key]) merged[key] = { league: g.league||{}, matches: [] };
+        (g.matches||[]).forEach(m => { m._stag = tag; merged[key].matches.push(m); });
+      });
+    };
+    addGroups(nsRes.data, 'upcoming');
+    addGroups(ipRes.data, 'live');
+    addGroups(ftRes.data, 'finished');
+
+    allGroups = Object.values(merged).filter(g => g.matches.length > 0);
+
     if (!allGroups.length) {
-      main.innerHTML = '<div class="state-box"><div style="font-size:28px;margin-bottom:10px">📭</div><div class="state-title">No upcoming matches</div><div class="state-sub">Try a different date or sport</div></div>';
+      main.innerHTML = '<div class="state-box"><div style="font-size:28px;margin-bottom:10px">X</div><div class="state-title">No matches found</div><div class="state-sub">Try a different date or sport</div></div>';
       return;
     }
     renderPickList();
   } catch(e) {
-    main.innerHTML = `<div class="state-box"><div class="state-title">Failed to load</div><div class="state-sub">${e.message}</div></div>`;
+    main.innerHTML = '<div class="state-box"><div class="state-title">Failed to load</div><div class="state-sub">'+e.message+'</div></div>';
   }
 }
 
@@ -383,6 +401,8 @@ function renderPickList() {
       const h = m.teams?.home?.name || 'Home';
       const a = m.teams?.away?.name || 'Away';
       const ts = m.timestamp ? new Date(m.timestamp).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}) : '--:--';
+      const tagLabel = m._stag==='live' ? 'LIVE' : m._stag==='finished' ? 'FT' : '';
+      const tagColor = m._stag==='live' ? 'var(--red)' : m._stag==='finished' ? 'var(--text3)' : 'var(--accent)';
       const isSel = !!selected[id];
       const selMarket = selected[id]?.market || 'Home Win';
       html += `<div class="pick-row${isSel?' selected':''}" id="row-${id}" onclick="togglePick('${id}','${esc(h)}','${esc(a)}',this)" data-id="${id}" data-home="${esc(h)}" data-away="${esc(a)}" data-league="${esc(league.name||'')}" data-ts="${m.timestamp||0}">
@@ -391,7 +411,7 @@ function renderPickList() {
           <div class="pick-team-line">${h} <span style="color:var(--text3);font-weight:400">vs</span> ${a}</div>
           <div class="pick-meta">
             <span class="pick-league">${league.name||''}</span>
-            <span class="pick-time">${ts}</span>
+            ${tagLabel ? `<span style="font-size:9px;font-weight:700;color:${tagColor};flex-shrink:0;">${tagLabel}</span>` : ''}<span class="pick-time">${ts}</span>
           </div>
         </div>
         <div class="market-wrap" onclick="event.stopPropagation()">
@@ -558,10 +578,8 @@ function renderResult(data, picks) {
 
 // ── Init ───────────────────────────────────────────────────
 initTheme();
+// Default to today's date
 document.getElementById('dateInput').value = new Date().toISOString().split('T')[0];
-// Auto-load tomorrow's matches
-const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate()+1);
-document.getElementById('dateInput').value = tomorrow.toISOString().split('T')[0];
 loadMatches();
 </script>
 </body>
