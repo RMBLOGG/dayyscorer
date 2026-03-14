@@ -74,7 +74,7 @@ def get_sports():
 @app.route("/api/parlay-predict", methods=["POST"])
 def parlay_predict():
     if not ANTHROPIC_API_KEY:
-        return jsonify({"error": "ANTHROPIC_API_KEY not configured on server"}), 500
+        return jsonify({"error": "ANTHROPIC_API_KEY belum di-set. Tambahkan environment variable ANTHROPIC_API_KEY di Vercel Dashboard > Settings > Environment Variables"}), 500
 
     body = request.get_json(force=True) or {}
     picks = body.get("picks", [])
