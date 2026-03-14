@@ -144,6 +144,11 @@ Respond ONLY with a valid JSON object, no markdown, no explanation outside JSON:
 Be realistic. For parlays with 4+ legs, overall_confidence should rarely exceed 55%. Be honest about uncertainty."""
 
     try:
+        payload = {
+            "model": "claude-haiku-4-5-20251001",
+            "max_tokens": 1500,
+            "messages": [{"role": "user", "content": prompt}]
+        }
         resp = requests.post(
             ANTHROPIC_URL,
             headers={
@@ -151,14 +156,11 @@ Be realistic. For parlays with 4+ legs, overall_confidence should rarely exceed 
                 "anthropic-version": "2023-06-01",
                 "content-type": "application/json"
             },
-            json={
-                "model": "claude-sonnet-4-5",
-                "max_tokens": 1500,
-                "messages": [{"role": "user", "content": prompt}]
-            },
+            json=payload,
             timeout=30
         )
-        resp.raise_for_status()
+        if not resp.ok:
+            return jsonify({"error": f"Claude API error {resp.status_code}: {resp.text[:300]}"}), 500
         data = resp.json()
         raw = data["content"][0]["text"].strip()
 
