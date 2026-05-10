@@ -221,11 +221,18 @@ body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text)
 .toast { animation:slideIn 0.3s ease; }
 .toast.hide { animation:slideOut 0.3s ease forwards; }
 
-@media(min-width:640px) {
+@media(min-width:640px) and (max-width:1023px) {
   .main,.nav,.controls,.parlay-hero { max-width:640px;margin-left:auto;margin-right:auto; }
   .bottom-nav { max-width:640px;left:50%;transform:translateX(-50%); }
   .builder-sticky { max-width:640px;left:50%;transform:translateX(-50%); }
   .toast { right:calc(50% - 320px + 16px); }
+}
+@media(min-width:1024px) {
+  body { max-width:860px; margin:0 auto; border-left:1px solid rgba(255,255,255,0.06); border-right:1px solid rgba(255,255,255,0.06); min-height:100vh; }
+  .bottom-nav { display:none; }
+  .builder-sticky { max-width:860px; left:50%; transform:translateX(-50%); }
+  .main { padding-bottom:24px; }
+  .toast { right:calc(50% - 430px + 16px); }
 }
 </style>
 </head>

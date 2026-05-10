@@ -171,15 +171,127 @@ body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text)
 .bnav svg { width:20px;height:20px; }
 .main { padding:0 0 72px; }
 
-@media(min-width:640px) {
+/* ── TABLET: center narrow ── */
+@media(min-width:640px) and (max-width:1023px) {
   .main,.nav,.sport-bar,.status-bar,.ticker,.date-row,.fav-banner,.install-banner { max-width:640px;margin-left:auto;margin-right:auto; }
   .bottom-nav { max-width:640px;left:50%;transform:translateX(-50%); }
   .search-overlay { max-width:640px;left:50%;transform:translateX(-50%); }
   .toast { right:calc(50% - 320px + 16px); }
 }
+
+/* ── DESKTOP: sidebar + content ── */
+@media(min-width:1024px) {
+  body { display:flex; overflow:hidden; height:100vh; }
+
+  /* Sidebar */
+  .ds-sidebar {
+    width:240px; flex-shrink:0;
+    background:#0d0f14;
+    border-right:1px solid rgba(255,255,255,0.07);
+    display:flex; flex-direction:column;
+    height:100vh; overflow-y:auto;
+    position:sticky; top:0;
+    scrollbar-width:thin; scrollbar-color:rgba(59,130,246,0.2) transparent;
+  }
+  .ds-sidebar::-webkit-scrollbar { width:4px; }
+  .ds-sidebar::-webkit-scrollbar-thumb { background:rgba(59,130,246,0.2); border-radius:2px; }
+  .ds-sidebar-brand {
+    padding:18px 18px 14px;
+    border-bottom:1px solid rgba(255,255,255,0.07);
+    display:flex; align-items:center; gap:8px;
+    font-weight:700; font-size:16px; letter-spacing:-0.3px;
+  }
+  .ds-sidebar-dot { width:8px;height:8px;background:#ef4444;border-radius:50%;animation:blink 1.4s ease infinite;flex-shrink:0; }
+  .ds-sidebar-nav { padding:10px 0; flex:1; }
+  .ds-sidebar-section { padding:14px 16px 5px; font-size:10px; font-weight:700; color:rgba(255,255,255,0.25); text-transform:uppercase; letter-spacing:1.5px; }
+  .ds-sidebar-link {
+    display:flex; align-items:center; gap:10px;
+    padding:9px 18px; color:rgba(255,255,255,0.55);
+    text-decoration:none; font-size:13px; font-weight:500;
+    border-left:2px solid transparent; transition:all 0.15s;
+    cursor:pointer; white-space:nowrap; overflow:hidden;
+  }
+  .ds-sidebar-link:hover { color:#fff; background:rgba(255,255,255,0.04); border-left-color:rgba(59,130,246,0.4); }
+  .ds-sidebar-link.active { color:var(--accent); background:rgba(59,130,246,0.07); border-left-color:var(--accent); }
+  .ds-sidebar-link svg { width:16px;height:16px;flex-shrink:0; }
+
+  /* Main scroll area */
+  .ds-main-wrap {
+    flex:1; min-width:0;
+    display:flex; flex-direction:column;
+    height:100vh; overflow:hidden;
+  }
+
+  /* Nav becomes topbar */
+  .nav { position:sticky; top:0; max-width:none !important; margin:0 !important; }
+
+  /* Sport bar */
+  .sport-bar { max-width:none !important; margin:0 !important; }
+
+  /* Scrollable content area */
+  .ds-scroll-area {
+    flex:1; overflow-y:auto; overflow-x:hidden;
+    scrollbar-width:thin; scrollbar-color:rgba(255,255,255,0.1) transparent;
+  }
+  .ds-scroll-area::-webkit-scrollbar { width:6px; }
+  .ds-scroll-area::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.1); border-radius:3px; }
+
+  .ticker,.status-bar,.date-row,.fav-banner,.install-banner,.main { max-width:none !important; margin:0 !important; }
+  .main { padding-bottom:24px !important; }
+
+  /* No bottom nav on desktop */
+  .bottom-nav { display:none; }
+
+  /* Search overlay scoped to main */
+  .search-overlay { max-width:none !important; left:240px !important; transform:none !important; top:52px; }
+  .toast { right:24px; bottom:24px; }
+}
 </style>
 </head>
 <body>
+
+<!-- DESKTOP SIDEBAR (hidden on mobile via CSS) -->
+<aside class="ds-sidebar" id="dsSidebar">
+  <div class="ds-sidebar-brand">
+    <span class="ds-sidebar-dot"></span>DayyScorer
+  </div>
+  <div class="ds-sidebar-nav">
+    <div class="ds-sidebar-section">Matches</div>
+    <div class="ds-sidebar-link active" onclick="switchStatus('inprogress')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Live
+    </div>
+    <div class="ds-sidebar-link" onclick="switchStatus('notstarted')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Schedule
+    </div>
+    <div class="ds-sidebar-link" onclick="switchStatus('finished')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Results
+    </div>
+
+    <div class="ds-sidebar-section" style="margin-top:8px;">Sports</div>
+    <div class="ds-sidebar-link active" id="sb-football" onclick="switchSport('football')">
+      <span style="font-size:15px;line-height:1;width:16px;text-align:center;">⚽</span>Football
+    </div>
+    <div class="ds-sidebar-link" id="sb-basketball" onclick="switchSport('basketball')">
+      <span style="font-size:15px;line-height:1;width:16px;text-align:center;">🏀</span>Basketball
+    </div>
+    <div class="ds-sidebar-link" id="sb-tennis" onclick="switchSport('tennis')">
+      <span style="font-size:15px;line-height:1;width:16px;text-align:center;">🎾</span>Tennis
+    </div>
+    <div class="ds-sidebar-link" id="sb-baseball" onclick="switchSport('baseball')">
+      <span style="font-size:15px;line-height:1;width:16px;text-align:center;">⚾</span>Baseball
+    </div>
+    <div class="ds-sidebar-link" id="sb-hockey" onclick="switchSport('hockey')">
+      <span style="font-size:15px;line-height:1;width:16px;text-align:center;">🏒</span>Hockey
+    </div>
+    <div class="ds-sidebar-link" id="sb-volleyball" onclick="switchSport('volleyball')">
+      <span style="font-size:15px;line-height:1;width:16px;text-align:center;">🏐</span>Volleyball
+    </div>
+  </div>
+</aside>
+
+<!-- MAIN WRAP (desktop: flex col with fixed height + scroll) -->
+<div class="ds-main-wrap">
+<div class="ds-scroll-area" id="dsScrollArea">
 
 <nav class="nav">
   <a class="nav-logo" href="/"><span class="nav-logo-dot"></span>DayyScorer</a>
@@ -254,6 +366,9 @@ body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text)
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Results
   </a>
 </nav>
+
+</div><!-- /ds-scroll-area -->
+</div><!-- /ds-main-wrap -->
 
 <script>
 // ── State ──────────────────────────────────────────────────
@@ -486,6 +601,7 @@ function switchStatus(s){
     b.classList.remove('active','active-live');
     if(b.dataset.status===s){b.classList.add('active');if(s==='inprogress')b.classList.add('active-live');}
   });
+  syncSidebarStatus(s);
   document.getElementById('dateRow').style.display=s==='inprogress'?'none':'flex';
   loadMatches();
 }
@@ -506,7 +622,28 @@ document.getElementById('searchInput').addEventListener('focus',function(){if(th
 document.addEventListener('click',e=>{if(!e.target.closest('#searchBox')&&!e.target.closest('#searchOverlay'))document.getElementById('searchOverlay').classList.remove('show');});
 
 // ── Tabs ────────────────────────────────────────────────────
-document.querySelectorAll('.sport-tab').forEach(t=>t.addEventListener('click',()=>{document.querySelectorAll('.sport-tab').forEach(x=>x.classList.remove('active'));t.classList.add('active');sport=t.dataset.sport;loadMatches();}));
+function switchSport(s) {
+  sport = s;
+  // Sync sport-bar tabs
+  document.querySelectorAll('.sport-tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.sport === s);
+  });
+  // Sync sidebar sport links
+  document.querySelectorAll('[id^="sb-"]').forEach(el => {
+    el.classList.toggle('active', el.id === 'sb-' + s);
+  });
+  loadMatches();
+}
+
+// Sync sidebar status links
+function syncSidebarStatus(s) {
+  const map = { inprogress: 0, notstarted: 1, finished: 2 };
+  document.querySelectorAll('.ds-sidebar-link').forEach((el, i) => {
+    if(i <= 2) el.classList.toggle('active', i === map[s]);
+  });
+}
+
+document.querySelectorAll('.sport-tab').forEach(t=>t.addEventListener('click',()=>switchSport(t.dataset.sport)));
 document.querySelectorAll('.status-btn').forEach(b=>b.addEventListener('click',()=>switchStatus(b.dataset.status)));
 
 // ── Init ────────────────────────────────────────────────────
