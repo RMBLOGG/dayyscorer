@@ -171,6 +171,11 @@ body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text)
 .bnav svg { width:20px;height:20px; }
 .main { padding:0 0 72px; }
 
+/* Sidebar & wrappers hidden/neutral on mobile */
+.ds-sidebar { display:none; }
+.ds-main-wrap { display:contents; }
+.ds-scroll-area { display:contents; }
+
 /* ── TABLET: center narrow ── */
 @media(min-width:640px) and (max-width:1023px) {
   .main,.nav,.sport-bar,.status-bar,.ticker,.date-row,.fav-banner,.install-banner { max-width:640px;margin-left:auto;margin-right:auto; }
@@ -217,8 +222,8 @@ body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text)
 
   /* Main scroll area */
   .ds-main-wrap {
-    flex:1; min-width:0;
     display:flex; flex-direction:column;
+    flex:1; min-width:0;
     height:100vh; overflow:hidden;
   }
 
@@ -230,6 +235,7 @@ body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text)
 
   /* Scrollable content area */
   .ds-scroll-area {
+    display:block;
     flex:1; overflow-y:auto; overflow-x:hidden;
     scrollbar-width:thin; scrollbar-color:rgba(255,255,255,0.1) transparent;
   }
